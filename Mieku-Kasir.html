@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mieku · Kasir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#FFF8EA;
+    --yolk:#F0A93A;
+    --leaf:#4C7A3B;
+    --chili:#C7361F;
+    --kasir-bg:#1D1712;
+    --kasir-card:#2A2119;
+    --kasir-ink:#F4EDE3;
+    --kasir-line: rgba(244,237,227,0.12);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{-webkit-font-smoothing:antialiased;min-height:100vh;}
+  .display{font-family:'Baloo 2',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  button:focus-visible, input:focus-visible, textarea:focus-visible{outline:3px solid var(--yolk); outline-offset:2px;}
+  input,textarea{font-family:inherit;}
+
+  .kasir-app{
+    background:var(--kasir-bg); color:var(--kasir-ink); min-height:100vh;
+    font-family:'Inter',sans-serif;
+  }
+  .kasir-wrap{max-width:760px;margin:0 auto;padding:24px 18px 60px;}
+  .kasir-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+  .kasir-title{font-family:'Baloo 2',sans-serif;font-size:24px;font-weight:800;}
+  .kasir-sub{font-size:12.5px;color:rgba(244,237,227,0.6);margin-top:2px;}
+  .kasir-refresh{
+    font-size:12.5px; font-weight:600; color:var(--yolk); background:rgba(240,169,58,0.12);
+    padding:8px 14px;border-radius:10px;
+  }
+
+  .mode-switch{display:flex;gap:8px;margin-bottom:18px;background:var(--kasir-card);padding:6px;border-radius:14px;border:1px solid var(--kasir-line);}
+  .mode-btn{flex:1;padding:10px;border-radius:10px;font-weight:700;font-size:13.5px;color:rgba(244,237,227,0.55);}
+  .mode-btn.active{background:var(--yolk);color:#2A1E0A;}
+
+  .kasir-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .kasir-tab{
+    padding:8px 16px;border-radius:999px;font-size:13.5px;font-weight:700;
+    background:var(--kasir-card); color:rgba(244,237,227,0.55); border:1px solid var(--kasir-line);
+  }
+  .kasir-tab.active{background:var(--yolk);color:#2A1E0A;border-color:var(--yolk);}
+  .kasir-grid{display:flex;flex-direction:column;gap:14px;}
+  .k-ticket{
+    background:var(--kasir-card); border:1px solid var(--kasir-line); border-radius:16px;
+    padding:16px 18px;
+  }
+  .k-ticket-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;}
+  .k-num{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--yolk);}
+  .k-type{font-size:12.5px;font-weight:700;padding:4px 10px;border-radius:999px;background:rgba(76,122,59,0.25);color:#9FD98A;}
+  .k-type.takeaway{background:rgba(240,169,58,0.2);color:var(--yolk);}
+  .k-pay{display:inline-block;font-size:11.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:rgba(244,237,227,0.1);color:var(--kasir-ink);margin:6px 0 0;}
+  .k-pay.qris{background:rgba(240,169,58,0.2);color:var(--yolk);}
+  .k-time{font-size:11.5px;color:rgba(244,237,227,0.5);margin-top:2px;}
+  .k-items{font-size:13.5px;line-height:1.6;margin:8px 0;color:rgba(244,237,227,0.9);}
+  .k-note{font-size:12.5px;color:var(--yolk);font-style:italic;margin-bottom:8px;}
+  .k-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px dashed var(--kasir-line);}
+  .k-total{font-family:'JetBrains Mono',monospace;font-weight:700;}
+  .k-done-btn{
+    background:var(--leaf);color:#fff;font-weight:700;font-size:13px;padding:9px 16px;border-radius:10px;
+  }
+  .k-done-btn.undo{background:transparent;border:1px solid var(--kasir-line);color:rgba(244,237,227,0.6);}
+  .k-empty{
+    text-align:center;padding:60px 20px;color:rgba(244,237,227,0.45);font-size:14px;
+  }
+
+  .menu-add-card{
+    background:var(--kasir-card); border:1px solid var(--kasir-line); border-radius:16px;
+    padding:16px 18px; margin-bottom:20px;
+  }
+  .menu-add-title{font-weight:700;font-size:15px;margin-bottom:12px;}
+  .field-wrap{margin-bottom:10px;}
+  .field-label{font-size:11.5px;font-weight:700;color:rgba(244,237,227,0.5);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px;}
+  .field-input{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--kasir-line);
+    background:var(--kasir-bg); color:var(--kasir-ink); font-size:14px;
+  }
+  textarea.field-input{resize:vertical;min-height:44px;font-family:inherit;}
+  .field-input::placeholder{color:rgba(244,237,227,0.3);}
+  .kat-picker{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;}
+  .kat-chip{
+    padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;
+    background:var(--kasir-bg);border:1px solid var(--kasir-line);color:rgba(244,237,227,0.6);
+  }
+  .kat-chip.active{background:var(--yolk);color:#2A1E0A;border-color:var(--yolk);}
+  .save-btn{
+    background:var(--yolk); color:#2A1E0A; font-weight:700; font-size:14px;
+    padding:11px 18px; border-radius:10px; margin-top:6px;
+  }
+  .save-btn:disabled{opacity:0.4;}
+  .cancel-btn{
+    background:transparent;color:rgba(244,237,227,0.55);font-weight:600;font-size:13.5px;
+    padding:11px 14px; margin-top:6px;
+  }
+  .menu-kat-group{margin-bottom:22px;}
+  .menu-kat-label{font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:rgba(244,237,227,0.45);margin-bottom:10px;}
+  .m-item{
+    background:var(--kasir-card); border:1px solid var(--kasir-line); border-radius:14px;
+    padding:13px 16px; display:flex; gap:12px; align-items:flex-start; margin-bottom:10px;
+  }
+  .m-item.nonaktif{opacity:0.45;}
+  .m-item-info{flex:1;min-width:0;}
+  .m-item-name{font-weight:700;font-size:14.5px;margin:0 0 3px;}
+  .m-item-desc{font-size:12px;color:rgba(244,237,227,0.55);line-height:1.4;margin:0 0 6px;}
+  .m-item-price{font-family:'JetBrains Mono',monospace;font-size:13.5px;color:var(--yolk);font-weight:700;}
+  .m-item-actions{display:flex;flex-direction:column;gap:6px;flex-shrink:0;}
+  .m-action-btn{
+    font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;
+    background:rgba(244,237,227,0.08);color:var(--kasir-ink);white-space:nowrap;
+  }
+  .m-action-btn.danger{background:rgba(199,54,31,0.18);color:#F0897A;}
+  .m-action-btn.toggle-on{background:rgba(76,122,59,0.2);color:#9FD98A;}
+  .menu-empty{text-align:center;padding:40px 20px;color:rgba(244,237,227,0.4);font-size:13.5px;}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+function formatRupiah(n){
+  return 'Rp' + n.toLocaleString('id-ID');
+}
+
+/* ================= SUPABASE CONFIG =================
+   Gunakan URL & KEY yang SAMA PERSIS dengan mieku-pelanggan.html.
+   SUPABASE_URL harus berupa base URL project, TANPA path tambahan
+   seperti /rest/v1/ di belakangnya.
+====================================================== */
+const SUPABASE_URL = 'https://xvcdgstxpcpebcqcsxgu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y2Rnc3R4cGNwZWJjcWNzeGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODU3NzYsImV4cCI6MjEwMDY2MTc3Nn0.48YpR24g2LsH6_4EQU1fYRAHTM3hpI9H9ttKmZtxjNU';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function mapRow(row){
+  return {
+    dbId: row.id,
+    id: 'M-' + String(row.id).padStart(3,'0'),
+    items: row.items,
+    total: row.total,
+    type: row.type,
+    detail: row.detail,
+    payment: row.payment,
+    note: row.note,
+    status: row.status,
+    time: row.created_at,
+  };
+}
+
+async function getOrders(){
+  try{
+    const { data, error } = await sb.from('orders').select('*').order('created_at', { ascending:true });
+    if(error) throw error;
+    return (data||[]).map(mapRow);
+  }catch(e){
+    console.error('Gagal mengambil pesanan dari Supabase', e);
+    return [];
+  }
+}
+
+async function getMenu(){
+  try{
+    const { data, error } = await sb.from('menu').select('*').order('kategori', { ascending:true }).order('urutan', { ascending:true });
+    if(error) throw error;
+    return data || [];
+  }catch(e){
+    console.error('Gagal mengambil menu dari Supabase', e);
+    return [];
+  }
+}
+
+/* ================= STATE ================= */
+const KAT_LABEL = { original:'Original', pedas:'Pedas', topping:'Topping' };
+const state = {
+  mode: 'pesanan',
+  kasirTab: 'aktif',
+  ordersCache: [],
+  menuCache: [],
+  menuForm: null,
+};
+
+async function refreshOrders(){
+  state.ordersCache = await getOrders();
+  render();
+}
+async function markDone(dbId, done){
+  try{
+    const { error } = await sb.from('orders').update({ status: done ? 'selesai' : 'aktif' }).eq('id', dbId);
+    if(error) throw error;
+  }catch(e){ console.error('Gagal update status pesanan', e); }
+  await refreshOrders();
+}
+
+async function refreshMenu(){
+  state.menuCache = await getMenu();
+  render();
+}
+
+function openMenuForm(existing){
+  state.menuForm = existing ? { ...existing, isNew:false } : {
+    id: null, kategori:'original', nama:'', deskripsi:'', harga:'', aktif:true, isNew:true
+  };
+  render();
+  setTimeout(()=>{ document.getElementById('m-nama-input')?.focus(); }, 30);
+}
+function closeMenuForm(){ state.menuForm = null; render(); }
+function updateMenuForm(field, val){ if(state.menuForm) state.menuForm[field] = val; }
+function setMenuFormKat(k){ if(state.menuForm){ state.menuForm.kategori = k; render(); } }
+
+function slugify(nama){
+  const base = nama.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+  return (base || 'item') + '-' + Math.random().toString(36).slice(2,6);
+}
+
+async function saveMenuItem(){
+  const f = state.menuForm;
+  if(!f) return;
+  const nama = f.nama.trim();
+  const harga = parseInt(f.harga, 10);
+  if(!nama || !harga || harga <= 0){
+    alert('Nama menu dan harga (angka > 0) wajib diisi.');
+    return;
+  }
+  try{
+    if(f.isNew){
+      const maxUrutan = state.menuCache.filter(m=>m.kategori===f.kategori).length;
+      const { error } = await sb.from('menu').insert({
+        id: slugify(nama),
+        kategori: f.kategori,
+        nama,
+        deskripsi: f.deskripsi ? f.deskripsi.trim() : '',
+        harga,
+        aktif: true,
+        urutan: maxUrutan + 1,
+      });
+      if(error) throw error;
+    } else {
+      const { error } = await sb.from('menu').update({
+        kategori: f.kategori,
+        nama,
+        deskripsi: f.deskripsi ? f.deskripsi.trim() : '',
+        harga,
+      }).eq('id', f.id);
+      if(error) throw error;
+    }
+  }catch(e){
+    console.error('Gagal menyimpan menu', e);
+    alert('Gagal menyimpan menu, coba lagi ya.');
+    return;
+  }
+  state.menuForm = null;
+  await refreshMenu();
+}
+
+async function toggleMenuAktif(id, aktif){
+  try{
+    const { error } = await sb.from('menu').update({ aktif }).eq('id', id);
+    if(error) throw error;
+  }catch(e){ console.error('Gagal update status menu', e); }
+  await refreshMenu();
+}
+
+async function deleteMenuItem(id, nama){
+  if(!confirm('Hapus "' + nama + '" dari menu? Tindakan ini tidak bisa dibatalkan.')) return;
+  try{
+    const { error } = await sb.from('menu').delete().eq('id', id);
+    if(error) throw error;
+  }catch(e){
+    console.error('Gagal menghapus menu', e);
+    alert('Gagal menghapus menu, coba lagi ya.');
+  }
+  await refreshMenu();
+}
+
+let ordersChannel = null;
+function subscribeOrders(){
+  if(ordersChannel) return;
+  ordersChannel = sb.channel('orders-realtime')
+    .on('postgres_changes', { event:'*', schema:'public', table:'orders' }, () => {
+      refreshOrders();
+    })
+    .subscribe();
+}
+let menuChannel = null;
+function subscribeMenu(){
+  if(menuChannel) return;
+  menuChannel = sb.channel('menu-realtime-kasir')
+    .on('postgres_changes', { event:'*', schema:'public', table:'menu' }, () => {
+      refreshMenu();
+    })
+    .subscribe();
+}
+let kasirPollTimer = null;
+
+function renderPesanan(){
+  const all = state.ordersCache;
+  const aktif = all.filter(o=>o.status==='aktif').sort((a,b)=>new Date(a.time)-new Date(b.time));
+  const selesai = all.filter(o=>o.status==='selesai').sort((a,b)=>new Date(b.time)-new Date(a.time));
+  const list = state.kasirTab==='aktif' ? aktif : selesai;
+
+  return `
+    <div class="kasir-sub" style="margin:-10px 0 14px;">${aktif.length} pesanan menunggu</div>
+    <div class="kasir-tabs">
+      <button class="kasir-tab ${state.kasirTab==='aktif'?'active':''}" onclick="setKasirTab('aktif')">Aktif (${aktif.length})</button>
+      <button class="kasir-tab ${state.kasirTab==='selesai'?'active':''}" onclick="setKasirTab('selesai')">Selesai (${selesai.length})</button>
+    </div>
+    <div class="kasir-grid">
+      ${list.length===0 ? '<div class="k-empty">Belum ada pesanan ' + (state.kasirTab==='aktif'?'masuk':'selesai') + '.</div>' : ''}
+      ${list.map(o=>`
+        <div class="k-ticket">
+          <div class="k-ticket-top">
+            <div>
+              <div class="k-num">${o.id}</div>
+              <div class="k-time">${new Date(o.time).toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'})}</div>
+            </div>
+            <div class="k-type ${o.type==='takeaway'?'takeaway':''}">${o.type==='dinein' ? 'Meja '+o.detail : 'Bawa Pulang · '+o.detail}</div>
+          </div>
+          <div class="k-items">${o.items.map(it=>`${it.qty}× ${it.nama}`).join('<br>')}</div>
+          <div class="k-pay ${o.payment==='qris'?'qris':''}">${o.payment==='qris' ? '📱 QRIS' : '💵 Tunai'}</div>
+          ${o.note ? `<div class="k-note">Catatan: ${o.note}</div>` : ''}
+          <div class="k-bottom">
+            <div class="k-total">${formatRupiah(o.total)}</div>
+            ${o.status==='aktif'
+              ? `<button class="k-done-btn" onclick="markDone(${o.dbId}, true)">✓ Tandai Selesai</button>`
+              : `<button class="k-done-btn undo" onclick="markDone(${o.dbId}, false)">↺ Batalkan</button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderMenuForm(){
+  const f = state.menuForm;
+  if(!f) return '';
+  const kats = ['original','pedas','topping'];
+  return `
+    <div class="menu-add-card">
+      <div class="menu-add-title">${f.isNew ? '+ Tambah Menu Baru' : 'Edit Menu'}</div>
+      <div class="field-wrap">
+        <div class="field-label">Nama Menu</div>
+        <input id="m-nama-input" class="field-input" placeholder="contoh: Cui Mie Spesial" value="${(f.nama||'').replace(/"/g,'&quot;')}" oninput="updateMenuForm('nama', this.value)">
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">Kategori</div>
+        <div class="kat-picker">
+          ${kats.map(k=>`<button class="kat-chip ${f.kategori===k?'active':''}" onclick="setMenuFormKat('${k}')">${KAT_LABEL[k]}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field-wrap">
+        <div class="field-label">Deskripsi</div>
+        <textarea class="field-input" placeholder="Deskripsi singkat menu ini" oninput="updateMenuForm('deskripsi', this.value)">${f.deskripsi||''}</textarea>
+      </div>
+      <div class="field-wrap" style="margin-bottom:4px;">
+        <div class="field-label">Harga (Rp)</div>
+        <input class="field-input" type="number" placeholder="contoh: 7000" value="${f.harga||''}" oninput="updateMenuForm('harga', this.value)">
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="save-btn" onclick="saveMenuItem()">${f.isNew ? 'Simpan Menu' : 'Simpan Perubahan'}</button>
+        <button class="cancel-btn" onclick="closeMenuForm()">Batal</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderMenuManage(){
+  const kats = ['original','pedas','topping'];
+  return `
+    ${!state.menuForm ? '<button class="save-btn" style="margin-bottom:18px;" onclick="openMenuForm(null)">+ Tambah Menu Baru</button>' : ''}
+    ${renderMenuForm()}
+    ${state.menuCache.length===0 ? '<div class="menu-empty">Belum ada menu. Tambahkan menu pertama di atas.</div>' : ''}
+    ${kats.map(k=>{
+      const items = state.menuCache.filter(m=>m.kategori===k);
+      if(items.length===0) return '';
+      return `
+        <div class="menu-kat-group">
+          <div class="menu-kat-label">${KAT_LABEL[k]} (${items.length})</div>
+          ${items.map(m=>`
+            <div class="m-item ${m.aktif?'':'nonaktif'}">
+              <div class="m-item-info">
+                <p class="m-item-name">${m.nama}${m.aktif?'':' · nonaktif'}</p>
+                ${m.deskripsi ? `<p class="m-item-desc">${m.deskripsi}</p>` : ''}
+                <p class="m-item-price">${formatRupiah(m.harga)}</p>
+              </div>
+              <div class="m-item-actions">
+                <button class="m-action-btn" onclick='openMenuForm(${JSON.stringify(m)})'>Edit</button>
+                <button class="m-action-btn ${m.aktif?'':'toggle-on'}" onclick="toggleMenuAktif('${m.id}', ${!m.aktif})">${m.aktif ? 'Nonaktifkan' : 'Aktifkan'}</button>
+                <button class="m-action-btn danger" onclick="deleteMenuItem('${m.id}', '${m.nama.replace(/'/g,"\\'")}')">Hapus</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function render(){
+  const root = document.getElementById('root');
+  root.innerHTML = `
+  <div class="kasir-app">
+    <div class="kasir-wrap">
+      <div class="kasir-header">
+        <div>
+          <div class="kasir-title display">Mieku · Kasir</div>
+          <div class="kasir-sub">${state.mode==='pesanan' ? 'Kelola pesanan masuk' : 'Kelola daftar menu'}</div>
+        </div>
+        <button class="kasir-refresh" onclick="${state.mode==='pesanan' ? 'refreshOrders()' : 'refreshMenu()'}">↻ Segarkan</button>
+      </div>
+      <div class="mode-switch">
+        <button class="mode-btn ${state.mode==='pesanan'?'active':''}" onclick="setMode('pesanan')">📋 Pesanan</button>
+        <button class="mode-btn ${state.mode==='menu'?'active':''}" onclick="setMode('menu')">🍜 Kelola Menu</button>
+      </div>
+      ${state.mode==='pesanan' ? renderPesanan() : renderMenuManage()}
+    </div>
+  </div>`;
+}
+
+window.refreshOrders = refreshOrders;
+window.markDone = markDone;
+window.setKasirTab = (t)=>{ state.kasirTab=t; render(); };
+window.setMode = (m)=>{ state.mode=m; state.menuForm=null; render(); };
+window.refreshMenu = refreshMenu;
+window.openMenuForm = openMenuForm;
+window.closeMenuForm = closeMenuForm;
+window.updateMenuForm = updateMenuForm;
+window.setMenuFormKat = setMenuFormKat;
+window.saveMenuItem = saveMenuItem;
+window.toggleMenuAktif = toggleMenuAktif;
+window.deleteMenuItem = deleteMenuItem;
+
+async function init(){
+  await Promise.all([refreshOrders(), refreshMenu()]);
+  subscribeOrders();
+  subscribeMenu();
+  kasirPollTimer = setInterval(()=>{ refreshOrders(); refreshMenu(); }, 10000);
+}
+init();
+</script>
+</body>
+</html>

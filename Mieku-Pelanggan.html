@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mieku — Pesan Mie Favoritmu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --bg:#FFF8EA;
+    --paper:#FFFDF7;
+    --ink:#2A211B;
+    --ink-soft:#6B5C4E;
+    --chili:#C7361F;
+    --chili-dark:#9C2A19;
+    --leaf:#4C7A3B;
+    --yolk:#F0A93A;
+    --yolk-dark:#B9740E;
+    --yolk-deep:#8A5209;
+    --line: rgba(42,33,27,0.14);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  .display{font-family:'Baloo 2',sans-serif;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;}
+  button:focus-visible, a:focus-visible, input:focus-visible{
+    outline:3px solid var(--yolk); outline-offset:2px;
+  }
+  img{max-width:100%;}
+
+  .app{max-width:520px;margin:0 auto;min-height:100vh;position:relative;padding-bottom:110px;}
+
+  /* ---------- customer header ---------- */
+  .cust-header{
+    padding:28px 20px 18px;
+    background:linear-gradient(180deg, var(--yolk) 0%, var(--yolk-dark) 100%);
+    color:var(--ink);
+    border-radius:0 0 28px 28px;
+    position:relative;
+    overflow:hidden;
+  }
+  .cust-header::after{
+    content:"";
+    position:absolute; right:-30px; top:-30px;
+    width:140px; height:140px; border-radius:50%;
+    background:rgba(255,255,255,0.16);
+  }
+  .brand-row{display:flex;align-items:center;gap:10px;position:relative;z-index:1;}
+  .brand-mark{
+    width:44px;height:44px;border-radius:12px;
+    background:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    font-size:22px;
+    box-shadow:0 3px 0 rgba(0,0,0,0.15);
+  }
+  .brand-name{font-size:28px;font-weight:800;line-height:1;letter-spacing:0.3px;}
+  .brand-tag{font-size:13px;opacity:0.75;margin-top:2px;font-weight:500;}
+  .header-meta{
+    margin-top:16px;font-size:12.5px;background:rgba(42,33,27,0.12);
+    padding:8px 12px;border-radius:10px;display:inline-flex;gap:6px;align-items:center;
+    position:relative;z-index:1;
+  }
+
+  /* ---------- category tabs ---------- */
+  .tabs{
+    position:sticky; top:0; z-index:20;
+    display:flex; gap:8px; padding:14px 16px;
+    background:var(--bg);
+    border-bottom:1px solid var(--line);
+    overflow-x:auto;
+  }
+  .tab{
+    padding:8px 16px; border-radius:999px; font-weight:600; font-size:14px;
+    background:var(--paper); border:1.5px solid var(--line); color:var(--ink-soft);
+    white-space:nowrap; transition:all .15s ease;
+  }
+  .tab.active{background:var(--yolk);color:var(--ink);border-color:var(--yolk-dark);}
+
+  /* ---------- menu list ---------- */
+  .section-label{
+    padding:18px 20px 6px; font-size:12px; font-weight:700; letter-spacing:1.2px;
+    text-transform:uppercase; color:var(--ink-soft);
+  }
+  .menu-list{padding:6px 16px;display:flex;flex-direction:column;gap:10px;}
+  .item-card{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    padding:14px; display:flex; gap:12px; align-items:flex-start;
+  }
+  .item-info{flex:1;min-width:0;}
+  .item-name{font-weight:700; font-size:15.5px; margin:0 0 3px;}
+  .item-desc{font-size:12.5px; color:var(--ink-soft); margin:0 0 8px; line-height:1.4;}
+  .item-price{font-size:14px; font-weight:600; color:var(--yolk-deep);}
+  .stepper{display:flex;align-items:center;gap:0;flex-shrink:0;}
+  .step-btn{
+    width:30px;height:30px;border-radius:8px;background:var(--bg);
+    border:1.5px solid var(--line); font-size:16px; font-weight:700; color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .step-btn.add{background:var(--yolk);color:var(--ink);border-color:var(--yolk-dark);}
+  .step-qty{width:28px;text-align:center;font-weight:700;font-size:14px;}
+  .step-group{display:flex;align-items:center;gap:8px;}
+
+  /* ---------- floating cart bar ---------- */
+  .cart-bar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    display:flex; justify-content:center; pointer-events:none;
+  }
+  .cart-bar-inner{
+    pointer-events:auto;
+    max-width:480px; width:calc(100% - 32px); margin-bottom:16px;
+    background:var(--ink); color:#fff; border-radius:16px;
+    padding:14px 18px; display:flex; align-items:center; justify-content:space-between;
+    box-shadow:0 10px 30px rgba(0,0,0,0.25);
+  }
+  .cart-bar-left{display:flex;align-items:center;gap:10px;}
+  .cart-count{
+    background:var(--yolk); color:var(--ink); font-weight:800; font-size:13px;
+    width:26px;height:26px;border-radius:50%; display:flex;align-items:center;justify-content:center;
+  }
+  .cart-total{font-weight:700;}
+  .cart-cta{
+    background:var(--yolk); color:var(--ink); font-weight:700; font-size:14px;
+    padding:9px 16px; border-radius:10px;
+  }
+
+  /* ---------- modal / sheet ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(20,15,10,0.5); z-index:40;
+    display:flex; align-items:flex-end; justify-content:center;
+  }
+  .sheet{
+    background:var(--bg); width:100%; max-width:520px; border-radius:24px 24px 0 0;
+    padding:20px 20px 24px; max-height:85vh; overflow-y:auto;
+    animation:slideup .22s ease;
+  }
+  @keyframes slideup{from{transform:translateY(30px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+  .sheet-handle{width:40px;height:4px;background:var(--line);border-radius:99px;margin:0 auto 14px;}
+  .sheet-title{font-size:20px;font-weight:800;margin:0 0 14px;}
+  .cart-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .cart-row-name{flex:1;font-weight:600;font-size:14.5px;}
+  .cart-row-price{font-size:13px;color:var(--ink-soft);}
+  .cart-summary{display:flex;justify-content:space-between;padding:14px 0 4px;font-weight:700;font-size:16px;}
+  .primary-btn{
+    width:100%; background:var(--yolk); color:var(--ink); font-weight:700; font-size:15px;
+    padding:14px; border-radius:14px; margin-top:14px;
+  }
+  .primary-btn:disabled{background:var(--line);color:var(--ink-soft);}
+  .ghost-btn{
+    width:100%; background:transparent; color:var(--ink-soft); font-weight:600; font-size:13.5px;
+    padding:10px; text-align:center; margin-top:6px;
+  }
+  .segment{display:flex; gap:8px; margin:10px 0 14px;}
+  .seg-btn{
+    flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:var(--paper);
+    font-weight:700; font-size:13.5px; color:var(--ink-soft);
+  }
+  .seg-btn.active{border-color:var(--yolk-dark); color:var(--yolk-deep); background:#FCF0DA;}
+  .qris-box{
+    display:flex; align-items:center; gap:12px; background:var(--paper);
+    border:1.5px dashed var(--yolk-dark); border-radius:14px; padding:12px 14px; margin:0 0 6px;
+  }
+  .qris-box-icon{font-size:28px;flex-shrink:0;}
+  .qris-box-title{font-weight:700;font-size:13.5px;margin-bottom:2px;}
+  .qris-box-sub{font-size:12px;color:var(--ink-soft);line-height:1.4;}
+  .field-label{font-size:12.5px;font-weight:700;color:var(--ink-soft);margin:12px 0 6px;text-transform:uppercase;letter-spacing:0.6px;}
+  .field-input{
+    width:100%; padding:12px 14px; border-radius:12px; border:1.5px solid var(--line);
+    background:var(--paper); font-size:14.5px; font-family:inherit;
+  }
+
+  /* ---------- ticket / confirmation ---------- */
+  .ticket{
+    background:var(--paper); border-radius:16px; position:relative; margin:6px 0 18px;
+    box-shadow:0 6px 18px rgba(42,33,27,0.08);
+  }
+  .ticket-head{
+    padding:18px 20px 14px; text-align:center; border-bottom:1px dashed var(--line);
+  }
+  .ticket-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-soft);font-weight:700;}
+  .ticket-number{font-size:34px;font-weight:700;color:var(--yolk-deep);margin-top:4px;}
+  .ticket-body{padding:14px 20px;}
+  .ticket-row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;}
+  .ticket-row.total{border-top:1px dashed var(--line);margin-top:6px;padding-top:10px;font-weight:700;font-size:15px;}
+  .ticket-meta{font-size:12.5px;color:var(--ink-soft);padding:0 20px 16px;}
+
+  .footer-note{
+    text-align:center; padding:18px; font-size:12px; color:var(--ink-soft);
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+/* ================= DATA MENU =================
+   Menu SEKARANG diambil langsung dari tabel "menu" di Supabase,
+   bukan lagi hardcode di sini. Kalau kasir menambah/mengubah menu,
+   halaman ini otomatis ikut ter-update lewat Realtime.
+================================================ */
+const KAT_LABEL = { original:'Original', pedas:'Pedas', topping:'Topping' };
+let MENU = []; // diisi dari Supabase saat load & realtime update
+
+function formatRupiah(n){
+  return 'Rp' + n.toLocaleString('id-ID');
+}
+
+/* ================= SUPABASE CONFIG =================
+   1. Buat project di https://supabase.com
+   2. Jalankan SQL setup (tabel "orders" + "menu" + realtime) — sama seperti di file kasir
+   3. Buka Project Settings > API, salin "Project URL" dan "anon public" key ke bawah ini
+   4. Gunakan URL & KEY yang SAMA PERSIS dengan yang dipakai di mieku-kasir.html
+      SUPABASE_URL harus base URL saja, TANPA /rest/v1/ di belakangnya.
+====================================================== */
+const SUPABASE_URL = 'https://xvcdgstxpcpebcqcsxgu.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y2Rnc3R4cGNwZWJjcWNzeGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODU3NzYsImV4cCI6MjEwMDY2MTc3Nn0.48YpR24g2LsH6_4EQU1fYRAHTM3hpI9H9ttKmZtxjNU';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+async function getMenu(){
+  try{
+    const { data, error } = await sb.from('menu').select('*')
+      .eq('aktif', true)
+      .order('kategori', { ascending:true })
+      .order('urutan', { ascending:true });
+    if(error) throw error;
+    // samakan bentuk field dengan yang dipakai render (kat/nama/desk/harga)
+    return (data||[]).map(m => ({ id:m.id, kat:m.kategori, nama:m.nama, desk:m.deskripsi||'', harga:m.harga }));
+  }catch(e){
+    console.error('Gagal mengambil menu dari Supabase', e);
+    return [];
+  }
+}
+
+let menuChannel = null;
+function subscribeMenu(){
+  if(menuChannel) return;
+  menuChannel = sb.channel('menu-realtime-pelanggan')
+    .on('postgres_changes', { event:'*', schema:'public', table:'menu' }, async () => {
+      MENU = await getMenu();
+      // kalau kategori aktif yang sedang dilihat jadi kosong, pindah ke kategori pertama yang ada isinya
+      const kats = [...new Set(MENU.map(m=>m.kat))];
+      if(kats.length && !kats.includes(state.activeKat)) state.activeKat = kats[0];
+      render();
+    })
+    .subscribe();
+}
+
+function mapRow(row){
+  return {
+    dbId: row.id,
+    id: 'M-' + String(row.id).padStart(3,'0'),
+    items: row.items,
+    total: row.total,
+    type: row.type,
+    detail: row.detail,
+    payment: row.payment,
+    note: row.note,
+    status: row.status,
+    time: row.created_at,
+  };
+}
+
+/* ================= STATE ================= */
+const state = {
+  activeKat: 'original',
+  cart: {}, // id -> qty
+  sheet: null, // null | 'cart' | 'checkout' | 'confirm'
+  orderType: 'dinein', // dinein | takeaway
+  paymentMethod: 'tunai', // tunai | qris
+  tableNumber: '',
+  customerName: '',
+  note: '',
+  lastOrder: null,
+};
+
+/* ================= CART LOGIC ================= */
+function cartCount(){ return Object.values(state.cart).reduce((a,b)=>a+b,0); }
+function cartTotal(){
+  return Object.entries(state.cart).reduce((sum,[id,qty])=>{
+    const item = MENU.find(m=>m.id===id);
+    return sum + (item ? item.harga*qty : 0);
+  },0);
+}
+function addItem(id){
+  state.cart[id] = (state.cart[id]||0)+1;
+  render();
+}
+function removeItem(id){
+  if(!state.cart[id]) return;
+  state.cart[id] -= 1;
+  if(state.cart[id]<=0) delete state.cart[id];
+  render();
+}
+
+async function submitOrder(){
+  const items = Object.entries(state.cart).map(([id,qty])=>{
+    const item = MENU.find(m=>m.id===id);
+    return {nama:item.nama, qty, harga:item.harga};
+  });
+  const total = cartTotal();
+  const payload = {
+    items, total,
+    type: state.orderType,
+    detail: state.orderType==='dinein' ? state.tableNumber : state.customerName,
+    payment: state.paymentMethod,
+    note: state.note,
+    status: 'aktif',
+  };
+  const { data, error } = await sb.from('orders').insert(payload).select().single();
+  if(error){
+    console.error('Gagal mengirim pesanan ke Supabase', error);
+    alert('Gagal mengirim pesanan, coba lagi ya. Pastikan koneksi internet aktif.');
+    return;
+  }
+  state.lastOrder = mapRow(data);
+  state.cart = {};
+  state.orderType = 'dinein';
+  state.paymentMethod = 'tunai';
+  state.tableNumber = '';
+  state.customerName = '';
+  state.note = '';
+  state.sheet = 'confirm';
+  render();
+}
+
+/* ================= RENDER ================= */
+function renderCustomer(){
+  if(MENU.length === 0){
+    return `
+    <div class="app">
+      <div class="cust-header">
+        <div class="brand-row">
+          <div class="brand-mark">🍜</div>
+          <div>
+            <div class="brand-name display">Mieku</div>
+            <div class="brand-tag">pesan mie favoritmu, tanpa antre</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:60px 24px;color:var(--ink-soft);font-size:14px;">
+        Menu belum tersedia saat ini. Silakan cek lagi sebentar lagi ya.
+      </div>
+    </div>`;
+  }
+
+  const kategoriTersedia = [...new Set(MENU.map(m=>m.kat))];
+  if(!kategoriTersedia.includes(state.activeKat)) state.activeKat = kategoriTersedia[0];
+  const items = MENU.filter(m=>m.kat===state.activeKat);
+  const count = cartCount();
+
+  return `
+  <div class="app">
+    <div class="cust-header">
+      <div class="brand-row">
+        <div class="brand-mark">🍜</div>
+        <div>
+          <div class="brand-name display">Mieku</div>
+          <div class="brand-tag">pesan mie favoritmu, tanpa antre</div>
+        </div>
+      </div>
+      <div class="header-meta">📱 Scan &amp; pesan langsung dari meja</div>
+    </div>
+
+    <div class="tabs">
+      ${kategoriTersedia.map(k=>`<button class="tab ${state.activeKat===k?'active':''}" onclick="setKat('${k}')">${KAT_LABEL[k]||k}</button>`).join('')}
+    </div>
+
+    <div class="section-label">${KAT_LABEL[state.activeKat]||state.activeKat}</div>
+    <div class="menu-list">
+      ${items.map(m=>`
+        <div class="item-card">
+          <div class="item-info">
+            <p class="item-name">${m.nama}</p>
+            <p class="item-desc">${m.desk}</p>
+            <p class="item-price mono">${formatRupiah(m.harga)}${m.kat==='topping' ? '/biji' : ''}</p>
+          </div>
+          <div class="stepper">
+            ${state.cart[m.id] ? `
+              <div class="step-group">
+                <button class="step-btn" onclick="removeItem('${m.id}')">−</button>
+                <span class="step-qty">${state.cart[m.id]}</span>
+                <button class="step-btn add" onclick="addItem('${m.id}')">+</button>
+              </div>
+            ` : `<button class="step-btn add" onclick="addItem('${m.id}')">+</button>`}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+
+    <div class="footer-note">warung sedang buka · pesanan langsung masuk ke kasir</div>
+
+    ${count>0 ? `
+    <div class="cart-bar">
+      <div class="cart-bar-inner">
+        <div class="cart-bar-left">
+          <div class="cart-count">${count}</div>
+          <div class="cart-total mono">${formatRupiah(cartTotal())}</div>
+        </div>
+        <button class="cart-cta" onclick="openSheet('cart')">Lihat Pesanan</button>
+      </div>
+    </div>` : ''}
+
+    ${state.sheet==='cart' ? renderCartSheet() : ''}
+    ${state.sheet==='checkout' ? renderCheckoutSheet() : ''}
+    ${state.sheet==='confirm' ? renderConfirmSheet() : ''}
+  </div>`;
+}
+
+function renderCartSheet(){
+  const rows = Object.entries(state.cart).map(([id,qty])=>{
+    const item = MENU.find(m=>m.id===id);
+    return `<div class="cart-row">
+      <div class="cart-row-name">${item.nama} <span class="mono" style="color:var(--ink-soft);font-weight:400;">×${qty}</span></div>
+      <div class="cart-row-price mono">${formatRupiah(item.harga*qty)}</div>
+    </div>`;
+  }).join('');
+  return `
+  <div class="overlay" onclick="closeSheetOutside(event)">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <p class="sheet-title display">Pesananmu</p>
+      ${rows || '<p style="color:var(--ink-soft);font-size:14px;">Keranjang masih kosong.</p>'}
+      <div class="cart-summary">
+        <span>Total</span><span class="mono">${formatRupiah(cartTotal())}</span>
+      </div>
+      <button class="primary-btn" ${cartCount()===0?'disabled':''} onclick="openSheet('checkout')">Lanjut ke Checkout</button>
+      <button class="ghost-btn" onclick="closeSheet()">Tambah menu lagi</button>
+    </div>
+  </div>`;
+}
+
+function renderCheckoutSheet(){
+  const isDinein = state.orderType==='dinein';
+  const canSubmit = isDinein ? state.tableNumber.trim().length>0 : state.customerName.trim().length>0;
+  return `
+  <div class="overlay" onclick="closeSheetOutside(event)">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <p class="sheet-title display">Detail Pesanan</p>
+      <div class="segment">
+        <button class="seg-btn ${isDinein?'active':''}" onclick="setOrderType('dinein')">🍽️ Makan di Tempat</button>
+        <button class="seg-btn ${!isDinein?'active':''}" onclick="setOrderType('takeaway')">🥡 Bawa Pulang</button>
+      </div>
+      ${isDinein ? `
+        <div class="field-label">Nomor Meja</div>
+        <input class="field-input" placeholder="contoh: 5" value="${state.tableNumber}" oninput="updateField('tableNumber', this.value)">
+      ` : `
+        <div class="field-label">Nama Pemesan</div>
+        <input class="field-input" placeholder="contoh: Budi" value="${state.customerName}" oninput="updateField('customerName', this.value)">
+      `}
+      <div class="field-label">Metode Pembayaran</div>
+      <div class="segment">
+        <button class="seg-btn ${state.paymentMethod==='tunai'?'active':''}" onclick="setPayment('tunai')">💵 Tunai</button>
+        <button class="seg-btn ${state.paymentMethod==='qris'?'active':''}" onclick="setPayment('qris')">📱 Scan QRIS</button>
+      </div>
+      ${state.paymentMethod==='qris' ? `
+        <div class="qris-box">
+          <div class="qris-box-icon">🔳</div>
+          <div>
+            <div class="qris-box-title">Bayar pakai QRIS</div>
+            <div class="qris-box-sub">Tunjukkan halaman ini ke kasir untuk di-scan, atau kasir akan menyiapkan QRIS di meja.</div>
+          </div>
+        </div>
+      ` : ''}
+      <div class="field-label">Catatan (opsional)</div>
+      <input class="field-input" placeholder="contoh: tidak pedas, tanpa seledri" value="${state.note}" oninput="updateField('note', this.value)">
+      <div class="cart-summary"><span>Total Bayar</span><span class="mono">${formatRupiah(cartTotal())}</span></div>
+      <button class="primary-btn" ${canSubmit?'':'disabled'} onclick="submitOrder()">Pesan Sekarang</button>
+      <button class="ghost-btn" onclick="openSheet('cart')">← Kembali</button>
+    </div>
+  </div>`;
+}
+
+function renderConfirmSheet(){
+  const o = state.lastOrder;
+  if(!o) return '';
+  return `
+  <div class="overlay">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+      <div class="ticket">
+        <div class="ticket-head">
+          <div class="ticket-label">Nomor Pesanan</div>
+          <div class="ticket-number mono">${o.id}</div>
+        </div>
+        <div class="ticket-body">
+          ${o.items.map(it=>`
+            <div class="ticket-row"><span>${it.nama} ×${it.qty}</span><span class="mono">${formatRupiah(it.harga*it.qty)}</span></div>
+          `).join('')}
+          <div class="ticket-row total"><span>Total</span><span class="mono">${formatRupiah(o.total)}</span></div>
+        </div>
+        <div class="ticket-meta">
+          ${o.type==='dinein' ? `Makan di tempat · Meja ${o.detail}` : `Bawa pulang · a.n. ${o.detail}`}
+          <br>Bayar: ${o.payment==='qris' ? '📱 Scan QRIS' : '💵 Tunai'}
+          ${o.note ? `<br>Catatan: ${o.note}` : ''}
+        </div>
+      </div>
+      <p style="text-align:center;font-size:13.5px;color:var(--ink-soft);margin:0 0 14px;">Pesanan sudah masuk ke kasir. Silakan tunggu, ya!</p>
+      <button class="primary-btn" onclick="closeSheet()">Pesan Menu Lain</button>
+    </div>
+  </div>`;
+}
+
+/* ================= EVENT HANDLERS (global) ================= */
+window.setKat = (k)=>{ state.activeKat=k; render(); };
+window.addItem = addItem;
+window.removeItem = removeItem;
+window.openSheet = (s)=>{ state.sheet=s; render(); };
+window.closeSheet = ()=>{ state.sheet=null; state.lastOrder=null; render(); };
+window.closeSheetOutside = (e)=>{ if(e.target.classList.contains('overlay')) closeSheet(); };
+window.setOrderType = (t)=>{ state.orderType=t; render(); };
+window.setPayment = (p)=>{ state.paymentMethod=p; render(); };
+window.updateField = (field, val)=>{ state[field]=val; };
+window.submitOrder = submitOrder;
+
+/* ================= MAIN RENDER ================= */
+function render(){
+  document.getElementById('root').innerHTML = renderCustomer();
+}
+
+/* ================= INIT ================= */
+async function init(){
+  render(); // tampilkan skeleton kosong dulu sambil menunggu data
+  MENU = await getMenu();
+  render();
+  subscribeMenu();
+}
+init();
+</script>
+</body>
+</html>
