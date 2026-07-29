@@ -9,17 +9,17 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    --bg:#FFF8EA;
-    --paper:#FFFDF7;
-    --ink:#2A211B;
-    --ink-soft:#6B5C4E;
-    --chili:#C7361F;
-    --chili-dark:#9C2A19;
-    --leaf:#4C7A3B;
-    --yolk:#F0A93A;
-    --yolk-dark:#B9740E;
-    --yolk-deep:#8A5209;
-    --line: rgba(42,33,27,0.14);
+    --bg:#100C08;
+    --paper:#FFFBF0;
+    --ink:#46280a;
+    --ink-soft:#8A7C68;
+    --chili:#E5533D;
+    --chili-dark:#B33F2C;
+    --leaf:#8A9B3F;
+    --yolk:#FFC107;
+    --yolk-dark:#E6A800;
+    --yolk-deep:#B8860B;
+    --line: rgba(255, 193, 7, 0.473);
     --radius: 18px;
   }
   *{box-sizing:border-box;}
@@ -101,6 +101,12 @@
   .item-name{font-weight:700; font-size:15.5px; margin:0 0 3px;}
   .item-desc{font-size:12.5px; color:var(--ink-soft); margin:0 0 8px; line-height:1.4;}
   .item-price{font-size:14px; font-weight:600; color:var(--yolk-deep);}
+  .item-stock-note{font-size:11.5px; color:var(--leaf); font-weight:600; margin:0 0 2px;}
+  .item-stock-note.habis{color:var(--chili);}
+  .habis-badge{
+    font-size:12px;font-weight:700;color:var(--chili);background:rgba(199,54,31,0.1);
+    padding:6px 12px;border-radius:8px;white-space:nowrap;
+  }
   .stepper{display:flex;align-items:center;gap:0;flex-shrink:0;}
   .step-btn{
     width:30px;height:30px;border-radius:8px;background:var(--bg);
@@ -155,7 +161,9 @@
     width:100%; background:var(--yolk); color:var(--ink); font-weight:700; font-size:15px;
     padding:14px; border-radius:14px; margin-top:14px;
   }
-  .primary-btn:disabled{background:var(--line);color:var(--ink-soft);}
+  .primary-btn:disabled{background:rgba(42,33,27,0.10);color:var(--ink-soft);border:1.5px solid rgba(42,33,27,0.22);cursor:not-allowed;}
+  .field-hint{font-size:12.5px;color:var(--chili);margin:6px 2px 0;font-weight:600;min-height:0;}
+  .field-hint:empty{margin:0;}
   .ghost-btn{
     width:100%; background:transparent; color:var(--ink-soft); font-weight:600; font-size:13.5px;
     padding:10px; text-align:center; margin-top:6px;
@@ -165,7 +173,7 @@
     flex:1; padding:12px; border-radius:12px; border:1.5px solid var(--line); background:var(--paper);
     font-weight:700; font-size:13.5px; color:var(--ink-soft);
   }
-  .seg-btn.active{border-color:var(--yolk-dark); color:var(--yolk-deep); background:#FCF0DA;}
+  .seg-btn.active{border-color:var(--yolk-dark); color:var(--yolk-deep); background:#FFF1C2;}
   .qris-box{
     display:flex; align-items:center; gap:12px; background:var(--paper);
     border:1.5px dashed var(--yolk-dark); border-radius:14px; padding:12px 14px; margin:0 0 6px;
@@ -197,6 +205,14 @@
   .footer-note{
     text-align:center; padding:18px; font-size:12px; color:var(--ink-soft);
   }
+
+  .closed-banner{
+    margin:14px 16px 0; background:rgba(197,54,31,0.08); border:1.5px solid rgba(197,54,31,0.3);
+    border-radius:14px; padding:14px 16px; text-align:center;
+  }
+  .closed-banner-title{font-weight:800;font-size:14.5px;color:var(--chili-dark);margin-bottom:2px;}
+  .closed-banner-sub{font-size:12.5px;color:var(--ink-soft);}
+  .habis-badge.tutup{color:var(--ink-soft);background:rgba(42,33,27,0.08);}
 </style>
 </head>
 <body>
@@ -209,19 +225,16 @@
    halaman ini otomatis ikut ter-update lewat Realtime.
 ================================================ */
 const KAT_LABEL = { original:'Original', pedas:'Pedas', topping:'Topping' };
+function katLabel(k){
+  return KAT_LABEL[k] || k.split('-').filter(Boolean).map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
+}
 let MENU = []; // diisi dari Supabase saat load & realtime update
 
 function formatRupiah(n){
   return 'Rp' + n.toLocaleString('id-ID');
 }
 
-/* ================= SUPABASE CONFIG =================
-   1. Buat project di https://supabase.com
-   2. Jalankan SQL setup (tabel "orders" + "menu" + realtime) — sama seperti di file kasir
-   3. Buka Project Settings > API, salin "Project URL" dan "anon public" key ke bawah ini
-   4. Gunakan URL & KEY yang SAMA PERSIS dengan yang dipakai di mieku-kasir.html
-      SUPABASE_URL harus base URL saja, TANPA /rest/v1/ di belakangnya.
-====================================================== */
+
 const SUPABASE_URL = 'https://xvcdgstxpcpebcqcsxgu.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2Y2Rnc3R4cGNwZWJjcWNzeGd1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUwODU3NzYsImV4cCI6MjEwMDY2MTc3Nn0.48YpR24g2LsH6_4EQU1fYRAHTM3hpI9H9ttKmZtxjNU';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -234,11 +247,40 @@ async function getMenu(){
       .order('urutan', { ascending:true });
     if(error) throw error;
     // samakan bentuk field dengan yang dipakai render (kat/nama/desk/harga)
-    return (data||[]).map(m => ({ id:m.id, kat:m.kategori, nama:m.nama, desk:m.deskripsi||'', harga:m.harga }));
+    return (data||[]).map(m => ({ id:m.id, kat:m.kategori, nama:m.nama, desk:m.deskripsi||'', harga:m.harga, stokAwal:m.stok_awal, stokSisa:m.stok_sisa }));
   }catch(e){
     console.error('Gagal mengambil menu dari Supabase', e);
     return [];
   }
+}
+
+let pengaturanTersedia = false;
+async function getPengaturan(){
+  try{
+    const { data, error } = await sb.from('pengaturan').select('*').eq('id', 1).maybeSingle();
+    if(error) throw error;
+    pengaturanTersedia = true;
+    return data ? !!data.toko_buka : true;
+  }catch(e){
+    console.error('Gagal mengambil pengaturan dari Supabase (tabel "pengaturan" mungkin belum dibuat)', e);
+    pengaturanTersedia = false;
+    return true;
+  }
+}
+
+let pengaturanChannel = null;
+function subscribePengaturan(){
+  if(pengaturanChannel) return;
+  pengaturanChannel = sb.channel('pengaturan-realtime-pelanggan')
+    .on('postgres_changes', { event:'*', schema:'public', table:'pengaturan' }, async () => {
+      state.tokoBuka = await getPengaturan();
+      if(!state.tokoBuka){
+        state.cart = {};
+        state.sheet = null;
+      }
+      render();
+    })
+    .subscribe();
 }
 
 let menuChannel = null;
@@ -281,6 +323,7 @@ const state = {
   customerName: '',
   note: '',
   lastOrder: null,
+  tokoBuka: true,
 };
 
 /* ================= CART LOGIC ================= */
@@ -292,6 +335,14 @@ function cartTotal(){
   },0);
 }
 function addItem(id){
+  const item = MENU.find(m=>m.id===id);
+  if(item && item.stokAwal!=null){
+    const sudahDiKeranjang = state.cart[id]||0;
+    if(sudahDiKeranjang >= item.stokSisa){
+      alert(item.stokSisa<=0 ? 'Maaf, menu ini sudah habis.' : `Stok tinggal ${item.stokSisa} porsi.`);
+      return;
+    }
+  }
   state.cart[id] = (state.cart[id]||0)+1;
   render();
 }
@@ -303,23 +354,33 @@ function removeItem(id){
 }
 
 async function submitOrder(){
+  if(!state.tokoBuka){
+    alert('Maaf, warung sedang tutup sementara. Coba lagi nanti ya.');
+    return;
+  }
   const items = Object.entries(state.cart).map(([id,qty])=>{
     const item = MENU.find(m=>m.id===id);
-    return {nama:item.nama, qty, harga:item.harga};
+    return {id:item.id, nama:item.nama, qty, harga:item.harga};
   });
   const total = cartTotal();
   const payload = {
-    items, total,
-    type: state.orderType,
-    detail: state.orderType==='dinein' ? state.tableNumber : state.customerName,
-    payment: state.paymentMethod,
-    note: state.note,
-    status: 'aktif',
+    p_items: items,
+    p_total: total,
+    p_type: state.orderType,
+    p_detail: state.orderType==='dinein' ? state.tableNumber : state.customerName,
+    p_payment: state.paymentMethod,
+    p_note: state.note,
   };
-  const { data, error } = await sb.from('orders').insert(payload).select().single();
+  const { data, error } = await sb.rpc('buat_pesanan', payload);
   if(error){
     console.error('Gagal mengirim pesanan ke Supabase', error);
-    alert('Gagal mengirim pesanan, coba lagi ya. Pastikan koneksi internet aktif.');
+    if(String(error.message||'').includes('STOK_HABIS')){
+      alert('Yah, stok salah satu menu di keranjangmu baru saja habis duluan dipesan orang lain. Yuk cek ulang keranjangnya.');
+      MENU = await getMenu();
+      render();
+    }else{
+      alert('Gagal mengirim pesanan, coba lagi ya. Pastikan koneksi internet aktif.');
+    }
     return;
   }
   state.lastOrder = mapRow(data);
@@ -371,21 +432,32 @@ function renderCustomer(){
       <div class="header-meta">📱 Scan &amp; pesan langsung dari meja</div>
     </div>
 
+    ${!state.tokoBuka ? `
+    <div class="closed-banner">
+      <div class="closed-banner-title">🔒 Warung sedang tutup sementara</div>
+      <div class="closed-banner-sub">Pesanan belum bisa diterima saat ini. Coba lagi nanti ya!</div>
+    </div>` : ''}
+
     <div class="tabs">
-      ${kategoriTersedia.map(k=>`<button class="tab ${state.activeKat===k?'active':''}" onclick="setKat('${k}')">${KAT_LABEL[k]||k}</button>`).join('')}
+      ${kategoriTersedia.map(k=>`<button class="tab ${state.activeKat===k?'active':''}" onclick="setKat('${k}')">${katLabel(k)}</button>`).join('')}
     </div>
 
-    <div class="section-label">${KAT_LABEL[state.activeKat]||state.activeKat}</div>
+    <div class="section-label">${katLabel(state.activeKat)}</div>
     <div class="menu-list">
-      ${items.map(m=>`
+      ${items.map(m=>{
+        const habis = m.stokAwal!=null && m.stokSisa<=0;
+        return `
         <div class="item-card">
           <div class="item-info">
             <p class="item-name">${m.nama}</p>
             <p class="item-desc">${m.desk}</p>
             <p class="item-price mono">${formatRupiah(m.harga)}${m.kat==='topping' ? '/biji' : ''}</p>
+            ${m.stokAwal!=null ? `<p class="item-stock-note ${habis?'habis':''}">${habis ? '⚠️ Stok habis' : `📦 Sisa ${m.stokSisa} porsi`}</p>` : ''}
           </div>
           <div class="stepper">
-            ${state.cart[m.id] ? `
+            ${!state.tokoBuka ? `<span class="habis-badge tutup">Tutup</span>` :
+              habis ? `<span class="habis-badge">Habis</span>` :
+              state.cart[m.id] ? `
               <div class="step-group">
                 <button class="step-btn" onclick="removeItem('${m.id}')">−</button>
                 <span class="step-qty">${state.cart[m.id]}</span>
@@ -394,12 +466,12 @@ function renderCustomer(){
             ` : `<button class="step-btn add" onclick="addItem('${m.id}')">+</button>`}
           </div>
         </div>
-      `).join('')}
+      `;}).join('')}
     </div>
 
-    <div class="footer-note">warung sedang buka · pesanan langsung masuk ke kasir</div>
+    <div class="footer-note">${state.tokoBuka ? 'warung sedang buka · pesanan langsung masuk ke kasir' : 'warung sedang tutup sementara · coba lagi nanti ya'}</div>
 
-    ${count>0 ? `
+    ${state.tokoBuka && count>0 ? `
     <div class="cart-bar">
       <div class="cart-bar-inner">
         <div class="cart-bar-left">
@@ -475,7 +547,8 @@ function renderCheckoutSheet(){
       <div class="field-label">Catatan (opsional)</div>
       <input class="field-input" placeholder="contoh: tidak pedas, tanpa seledri" value="${state.note}" oninput="updateField('note', this.value)">
       <div class="cart-summary"><span>Total Bayar</span><span class="mono">${formatRupiah(cartTotal())}</span></div>
-      <button class="primary-btn" ${canSubmit?'':'disabled'} onclick="submitOrder()">Pesan Sekarang</button>
+      <button id="submit-order-btn" class="primary-btn" ${canSubmit?'':'disabled'} onclick="submitOrder()">Pesan Sekarang</button>
+      <div id="submit-hint" class="field-hint">${canSubmit ? '' : `⚠️ Isi dulu ${isDinein?'nomor meja':'nama pemesan'} di atas ya`}</div>
       <button class="ghost-btn" onclick="openSheet('cart')">← Kembali</button>
     </div>
   </div>`;
@@ -520,7 +593,20 @@ window.closeSheet = ()=>{ state.sheet=null; state.lastOrder=null; render(); };
 window.closeSheetOutside = (e)=>{ if(e.target.classList.contains('overlay')) closeSheet(); };
 window.setOrderType = (t)=>{ state.orderType=t; render(); };
 window.setPayment = (p)=>{ state.paymentMethod=p; render(); };
-window.updateField = (field, val)=>{ state[field]=val; };
+window.updateField = (field, val)=>{
+  state[field]=val;
+  if(field==='tableNumber' || field==='customerName'){
+    updateSubmitButtonState();
+  }
+};
+function updateSubmitButtonState(){
+  const isDinein = state.orderType==='dinein';
+  const canSubmit = isDinein ? state.tableNumber.trim().length>0 : state.customerName.trim().length>0;
+  const btn = document.getElementById('submit-order-btn');
+  const hint = document.getElementById('submit-hint');
+  if(btn) btn.disabled = !canSubmit;
+  if(hint) hint.textContent = canSubmit ? '' : `⚠️ Isi dulu ${isDinein?'nomor meja':'nama pemesan'} di atas ya`;
+}
 window.submitOrder = submitOrder;
 
 /* ================= MAIN RENDER ================= */
@@ -531,9 +617,12 @@ function render(){
 /* ================= INIT ================= */
 async function init(){
   render(); // tampilkan skeleton kosong dulu sambil menunggu data
-  MENU = await getMenu();
+  const [menuData, tokoBuka] = await Promise.all([getMenu(), getPengaturan()]);
+  MENU = menuData;
+  state.tokoBuka = tokoBuka;
   render();
   subscribeMenu();
+  if(pengaturanTersedia) subscribePengaturan();
 }
 init();
 </script>
