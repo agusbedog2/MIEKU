@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mieku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF6DE;
+    --yolk:#FFC107;
+    --yolk-dark:#E6A800;
+    --ink-onyolk:#1B140A;
+    --kasir-bg:#100C08;
+    --kasir-card:#1E170F;
+    --kasir-ink:#F5EEE0;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100vh;
+    background:var(--bg);
+    font-family:'Inter',sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .wrap{max-width:420px;width:100%;text-align:center;}
+  .logo{font-family:'Baloo 2',sans-serif;font-size:36px;font-weight:800;color:var(--ink-onyolk);margin-bottom:6px;}
+  .sub{font-size:14px;color:rgba(27,20,10,0.6);margin-bottom:36px;}
+  .choice{
+    display:flex;flex-direction:column;gap:16px;
+  }
+  a.card{
+    text-decoration:none;
+    display:flex;align-items:center;gap:16px;
+    background:#fff;border:1px solid rgba(27,20,10,0.08);
+    border-radius:18px;padding:20px 22px;
+    box-shadow:0 4px 16px rgba(27,20,10,0.06);
+    transition:transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  a.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(27,20,10,0.1);}
+  a.card:active{transform:translateY(0);}
+  .icon{
+    font-size:28px;width:56px;height:56px;flex-shrink:0;
+    border-radius:14px;display:flex;align-items:center;justify-content:center;
+  }
+  .icon.kasir{background:var(--kasir-bg);}
+  .icon.pelanggan{background:rgba(255,193,7,0.18);}
+  .card-text{text-align:left;}
+  .card-title{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:17px;color:var(--ink-onyolk);}
+  .card-desc{font-size:12.5px;color:rgba(27,20,10,0.55);margin-top:2px;}
+  .footer{margin-top:32px;font-size:11.5px;color:rgba(27,20,10,0.35);}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="logo">🍜 Mieku</div>
+    <div class="sub">Pilih halaman yang ingin dibuka</div>
+    <div class="choice">
+      <a class="card" href="pelanggan.html">
+        <div class="icon pelanggan">🧑‍🍳</div>
+        <div class="card-text">
+          <div class="card-title">Pelanggan</div>
+          <div class="card-desc">Lihat menu &amp; buat pesanan</div>
+        </div>
+      </a>
+      <a class="card" href="kasir.html">
+        <div class="icon kasir">🧾</div>
+        <div class="card-text">
+          <div class="card-title">Kasir</div>
+          <div class="card-desc">Kelola pesanan, menu &amp; laporan</div>
+        </div>
+      </a>
+    </div>
+    <div class="footer">Mieku · Sistem Pemesanan</div>
+  </div>
+</body>
+</html>
